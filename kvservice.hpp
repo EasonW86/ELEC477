@@ -9,6 +9,7 @@
 #include <cstring>
 #include <arpa/inet.h>
 #include <sys/socket.h>
+#include <memory>
 
 #ifdef __APPLE__
 #include <ndbm.h>
@@ -21,6 +22,8 @@
 #include "E477KV.pb.h"
 #include "dumpHex.hpp"
 #include "network.hpp"
+#include "ServiceDirectoryClientStub.hpp"
+
 
 using namespace std;
 
@@ -49,8 +52,13 @@ class KVServiceServer: public Service{
     bool kvPut(int key, const uint8_t * value, uint16_t vlen);
     kvGetResult kvGet(int key);
     
+private:
+    std::string svcName; // Human-readable name for the service
+    int port; // Port number for this service
+    ServiceDirectoryClientStub directoryClient;
+
 public:
-    KVServiceServer(string name, weak_ptr<Node> p):Service(name + ".KV_RPC" ,p){ }
+    KVServiceServer(std::string name, std::weak_ptr<Node> p, ServiceDirectoryClientStub& dirClient);
     ~KVServiceServer(){
         stop();
         
@@ -69,7 +77,8 @@ public:
     }
     void start();
     void stop();
-    
+    void setServiceName(const std::string& name);
+    void setPort(int p);
     void setDBMFileName(string name) {DBMFileName = "data/" + name;}
 
 };

@@ -29,7 +29,9 @@ class KVClient1: public Node {
     //std::atomic<bool> alive;
 
 public:
-    KVClient1(string name): Node(name), kvService(name){
+     KVClient1(std::string name, ServiceDirectoryClientStub& dirClient)
+    : Node(name), kvService(name, dirClient) { // Assuming kvService is a KVServiceStub
+        // Constructor implementation...
     }
     ~KVClient1(){
         kvService.shutdown();

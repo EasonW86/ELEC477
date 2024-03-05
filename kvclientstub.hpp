@@ -17,6 +17,8 @@
 #include "KVrpc.h"
 #include "E477KV.pb.h"
 #include "dumpHex.hpp"
+#include "ServiceDirectoryClientStub.hpp"
+#include "network.hpp"
 
 
 using namespace std;
@@ -27,6 +29,7 @@ class KVServiceStub{
     bool ready;
     string serverAddrString;
     string serverName;
+    int portNum;
 
     // rpc specific values
     // version 1.0
@@ -43,9 +46,14 @@ class KVServiceStub{
 
     bool init();
 
+private:
+    // Added
+    std::string svcName; // Human-readable name for the service
+    ServiceDirectoryClientStub directoryClient;
+
 public:
-    KVServiceStub(string name ): name(name),ready(false), serial(1){
-    }
+    // KVServiceStub changed
+    KVServiceStub(std::string name, ServiceDirectoryClientStub& dirClient);
     ~KVServiceStub(){
         //shutdown();
     }
@@ -53,9 +61,15 @@ public:
     void setServerAddress(string address){
         serverAddrString = address;
     }
+    void setPort(int port){
+        portNum = port;
+    }
     void setServerName(string name){
         serverName = name;
     }
+    // setServiceName added
+    void setServiceName(const std::string& name);
+
     bool kvPut(int32_t, const uint8_t* value, uint16_t vlen);
     kvGetResult kvGet(int32_t);
 };

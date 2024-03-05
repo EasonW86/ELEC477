@@ -12,6 +12,11 @@ using namespace string_literals;
 #define close mclose
 void mclose(int fd);
 
+KVServiceServer::KVServiceServer(std::string name, std::weak_ptr<Node> p, ServiceDirectoryClientStub& dirClient)
+: Service(name, p), directoryClient(dirClient), svcName(name) {
+    alive = true; 
+}
+
 void KVServiceServer::stop(){
     alive = false;
 }
@@ -209,5 +214,13 @@ kvGetResult KVServiceServer::kvGet(int key){
     }
     
     return res;
+}
+
+void KVServiceServer::setServiceName(const std::string& name) {
+    svcName = name;
+}
+
+void KVServiceServer::setPort(int p) {
+    port = p;
 }
 

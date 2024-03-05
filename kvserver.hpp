@@ -3,16 +3,23 @@
 
 #include "network.hpp"
 #include "kvservice.hpp"
+#include "ServiceDirectoryClientStub.hpp"
 
 class KVServer: public Node{
     private:
-        shared_ptr<KVServiceServer> kvService;
+        std:: shared_ptr<KVServiceServer> kvService;
+        std::string svcName; // Human-readable service name
+        int port; // Port number for the kv service
+        ServiceDirectoryClientStub directoryClient;
     public:
-        KVServer(string nodeName);
-	~KVServer(){
-	}
+        KVServer(std::string nodeName, ServiceDirectoryClientStub& directoryClient);
+        ~KVServer(){}
 
-	void start();
+        void setServiceName(const std::string& name);
+        
+        void setPort(int p);
+
+	    void start();
     
         void setDBMFileName(string name);
 };

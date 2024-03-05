@@ -1,98 +1,54 @@
-/*+
- *  File:   main.cpp
- *
- *  Purpose:
- *      This module is the start driver for several of the ELEC 477 assignments.
- *      It initializes the
--*/
+#include "serviceDirServer.hpp"
+#include "ServiceDirectoryClientStub.hpp"
 #include <iostream>
-#include <sstream>
-#include <chrono>
-#include <thread>
 #include <string>
 
-
-#include "network.hpp"
-#include "kvserver.hpp"
-#include "kvclient1.hpp"
-
-extern std::map<std::thread::id,shared_ptr<Node>> nodes;
-extern std::map<std::thread::id,string> names;
-
-int main(int argc, char * argv[]){
-    // handle command line arguments...
-    int res = network_init(argc, argv);
-    std::stringstream ss;
-
-    // start all of the servers first. This will let them get up
-    // and running before the client attempts to communicste
-    std::cout << "Main: ************************************" << std::endl;
-    std::cout << "Main: starting server" << std::endl;
-
-    // make shared broken?
-    shared_ptr<KVServer> kvServer = make_shared<KVServer>("kvserver");
-
-    kvServer->setAddress("10.0.0.12");
-    kvServer->setDBMFileName("server1");
-    kvServer->init();
-    kvServer -> startServices();
-
-
-    std::cout << "Main: ************************************" << std::endl;
-    std::cout << "Main: init client" << std::endl;
-    std::this_thread::sleep_for(std::chrono::milliseconds(50));
-    shared_ptr<KVClient1> kvClient = make_shared<KVClient1>("kvclient");
-    kvClient->setAddress("10.0.0.14");
-    kvClient -> setServerName("kvserver");
-    kvClient -> init();
-
-    std::cout << "Main: ************************************" << std::endl;
-    std::cout << "Main: starting client" << std::endl;
-    vector<shared_ptr<thread>> clientThreads;
-    {
-        // need a scope for the lock guard. 
-        // if this doesn't work put it in a function
-	std::lock_guard<std::mutex> guard(nodes_mutex);
-
-	shared_ptr<thread> t = make_shared<thread>([kvClient](){
-	    kvClient -> execute();
-	});
-
-	clientThreads.push_back(t);
-	nodes.insert(make_pair(t->get_id(), kvClient));
-	names.insert(make_pair(t->get_id(),"kvclient"));
-
-    }
-
-    // wait for clients to finish
-    std::cout << "Main: ************************************" << std::endl;
-    std::cout << "Main: waiting for clients to finish" << std::endl;
-    vector<shared_ptr<thread>>::iterator thit;
-    for (thit = clientThreads.begin(); thit != clientThreads.end(); thit++){
-	shared_ptr<thread> tmp = *thit;
-	tmp->join();
-    }
-
-    // when clients finish, shut down the servers
-    // TODO - combine into node stop? that is node stop should
-    // shut down all services and the client.
-
-    std::cout << "Main: ************************************" << std::endl;
-    std::cout << "Main: calling stop services on server" << std::endl;
-    kvServer -> stopServices();
-
-    std::cout << "Main: ************************************" << std::endl;
-    std::cout << "Main: waiting for threads to complete" << std::endl;
-    // wait for all server threads
-    kvServer -> waitForServices();
- 
-
-
-    //std::this_thread::sleep_for(std::chrono::milliseconds(10000));
-
-
-    google::protobuf::ShutdownProtobufLibrary();
-
-    return 0;
+void printTestResult(const std::string& testName, bool result) {
+    std::cout << testName << ": " << (result ? "PASSED" : "FAILED") << std::endl;
 }
 
+int main() {
+    bool allTestsPassed = true;
+
+    serviceDirServer directory;
+    ServiceDirectoryClientStub client(directory);
+
+    // Test data
+    ServerInfo server1Info = {"Server1", 1234};
+    ServerInfo server2Info = {"Server2", 5678};
+    std::string serviceName1 = "apartments";
+    std::string serviceName2 = "stocks";
+
+    // Register services using client
+    client.registerService(serviceName1, server1Info);
+    client.registerService(serviceName2, server2Info);
+    std::cout << "Registering services..." << std::endl;
+
+    // Search for services using client
+    ServerInfo searchResult1 = client.searchService(serviceName1);
+    bool searchTest1 = searchResult1.serverName == server1Info.serverName && searchResult1.port == server1Info.port;
+    printTestResult("Search Service " + serviceName1, searchTest1);
+    allTestsPassed &= searchTest1;
+
+    // Print server name and port of searchResult1
+    //std::cout << "Search Result for " << serviceName1 << ": ";
+    //std::cout << "Server Name: " << searchResult1.serverName << ", Port: " << searchResult1.port << std::endl;
+
+    ServerInfo searchResult2 = client.searchService(serviceName2);
+    bool searchTest2 = searchResult2.serverName == server2Info.serverName && searchResult2.port == server2Info.port;
+    printTestResult("Search Service " + serviceName2, searchTest2);
+    allTestsPassed &= searchTest2;
+
+    // Delete a service using client
+    client.deleteService(serviceName1);
+    ServerInfo deleteResult = client.searchService(serviceName1);
+    bool deleteTest = deleteResult.serverName.empty() && deleteResult.port == -1;
+    printTestResult("Delete Service " + serviceName1, deleteTest);
+    allTestsPassed &= deleteTest;
+
+    // Summary
+    std::cout << "\n=== Summary ===\n";
+    std::cout << "All tests " << (allTestsPassed ? "PASSED" : "FAILED") << std::endl;
+
+    return allTestsPassed ? 0 : 1;
+}

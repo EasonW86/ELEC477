@@ -1,10 +1,12 @@
 #include "kvclientstub.hpp"
 
+
 using namespace std;
 using namespace std::string_literals;
 
 #define close mclose
 void mclose(int fd);
+
 
 bool KVServiceStub::kvPut(int32_t key,const uint8_t* value, uint16_t vlen){
     // init if needed
@@ -96,6 +98,15 @@ bool KVServiceStub::kvPut(int32_t key,const uint8_t* value, uint16_t vlen){
     }
 
     return returnRes;
+}
+
+KVServiceStub::KVServiceStub(std::string name, ServiceDirectoryClientStub& dirClient)
+: svcName(name), directoryClient(dirClient) {
+    
+}
+
+void KVServiceStub::setServiceName(const std::string& name) {
+    svcName = name;
 }
 
 kvGetResult KVServiceStub::kvGet(int32_t key){
@@ -198,6 +209,16 @@ bool KVServiceStub::init(){
         cerr << "Does not know server name!! " << endl;
         return false;
     }
+
+    ServerInfo info = directoryClient.searchService(svcName);
+    if(info.serverName.empty()) {
+        std::cerr << "Service " << svcName << " not found." << std::endl;
+        return false;
+    }
+
+    // Use info to set server address and port before initializing connection
+    setServerAddress(info.serverName);
+    setPort(info.port);
 
     // Filling server information
     // TODO - need to add service lookup concept
